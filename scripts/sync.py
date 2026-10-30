@@ -116,5 +116,5 @@ if __name__ == "__main__":
     except Exception as e:
         msg = str(e)[:300]
         print("FAILED:", msg)
-        print(f"::error title=sync failed::{msg} (secret_len={len(SECRET)}, token_len={len(TOKEN)})")
+        print(f"::error title=sync failed::{msg} (secret_len={len(SECRET)}, secret_has_sync_prefix={SECRET.startswith('sync_')}, secret_equals_token={SECRET == TOKEN})")
         sys.exit(1)
