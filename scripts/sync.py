@@ -14,9 +14,9 @@ READ_ONLY = {
     "InstrumentsService/GetBondCoupons",
 }
 
-TOKEN = os.environ["TBANK_TOKEN"]
-TARGET = os.environ["APPS_SCRIPT_URL"]
-SECRET = os.environ["SYNC_SECRET"]
+TOKEN = os.environ["TBANK_TOKEN"].strip()
+TARGET = os.environ["APPS_SCRIPT_URL"].strip()
+SECRET = os.environ["SYNC_SECRET"].strip()
 CA_FILE = os.environ["TBANK_CA_FILE"]
 
 ctx = ssl.create_default_context(cafile=CA_FILE)
@@ -58,6 +58,7 @@ def key(method, body, cursor=""):
 
 
 def main():
+    print("start", flush=True)
     now = datetime.now(timezone.utc)
     out, bonds = {}, {}
     m = "UsersService/GetAccounts"

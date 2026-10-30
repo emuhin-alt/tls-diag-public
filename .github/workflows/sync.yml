@@ -30,11 +30,12 @@ jobs:
           cp "$ROOT" "$RUNNER_TEMP/tbank-root.pem"
           echo "TBANK_CA_FILE=$RUNNER_TEMP/tbank-root.pem" >> "$GITHUB_ENV"
       - name: Load T-Invest data into the sheet (read-only)
+        timeout-minutes: 6
         env:
           TBANK_TOKEN: ${{ secrets.TINKOFF_TOKEN }}
           APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
           SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
-        run: python3 scripts/sync.py
+        run: python3 -u scripts/sync.py
       - name: Keepalive (scheduled workflows stop after 60 days of repo inactivity)
         run: |
           LAST=$(git log -1 --format=%ct)
