@@ -1,0 +1,40 @@
+name: sync
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write   # only for the monthly keepalive commit
+concurrency:
+  group: sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin Russian Trusted Root CA (SHA-256 checked, used only for tbank.ru)
+        run: |
+          H=invest-public-api.tbank.ru
+          echo | openssl s_client -connect $H:443 -servername $H -showcerts 2>/dev/null > chain.txt
+          awk '/BEGIN CERT/{n++;p=1} p{print > ("c" n ".pem")} /END CERT/{p=0}' chain.txt
+          ROOT=$(ls c*.pem | sort -V | tail -1)
+          GOT=$(openssl x509 -in "$ROOT" -noout -fingerprint -sha256 | cut -d= -f2 | tr -d ':' | tr A-Z a-z)
+          WANT=d26d2d0231b7c39f92cc738512ba54103519e4405d68b5bd703e9788ca8ecf31
+          [ "$GOT" = "$WANT" ] || { echo "Root CA fingerprint mismatch"; exit 1; }
+          cp "$ROOT" "$RUNNER_TEMP/tbank-root.pem"
+          echo "TBANK_CA_FILE=$RUNNER_TEMP/tbank-root.pem" >> "$GITHUB_ENV"
+      - name: Load T-Invest data into the sheet (read-only)
+        env:
+          TBANK_TOKEN: ${{ secrets.TBANK_TOKEN }}
+          APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+        run: python3 scripts/sync.py
+      - name: Keepalive (scheduled workflows stop after 60 days of repo inactivity)
+        run: |
+          LAST=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - LAST )) -gt 2592000 ]; then
+            git config user.name "sync-bot"; git config user.email "sync-bot@users.noreply.github.com"
+            git commit --allow-empty -m "keepalive" && git push
+          fi
