@@ -10,10 +10,10 @@ jobs:
         run: |
           H=invest-public-api.tbank.ru
           echo | openssl s_client -connect $H:443 -servername $H -showcerts 2>/dev/null > chain.txt
-          awk '/BEGIN CERT/{n++} n{print > ("c" n ".pem")} /END CERT/{close("c" n ".pem")}' chain.txt
+          awk '/BEGIN CERT/{n++;p=1} p{print > ("c" n ".pem")} /END CERT/{p=0}' chain.txt
           for f in c*.pem; do
             echo "== $f"
-            openssl x509 -in $f -noout -subject -issuer -dates -fingerprint -sha256 2>/dev/null | sed 's/street.*//'
+            openssl x509 -in $f -noout -subject -issuer -dates -fingerprint -sha256 2>&1 | sed 's/street.*//'
           done
           echo "== ROOT PEM (c3.pem)"
           cat c3.pem
