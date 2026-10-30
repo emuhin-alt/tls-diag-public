@@ -27,7 +27,7 @@ jobs:
           echo "TBANK_CA_FILE=$RUNNER_TEMP/tbank-root.pem" >> "$GITHUB_ENV"
       - name: Load T-Invest data into the sheet (read-only)
         env:
-          TBANK_TOKEN: ${{ secrets.TBANK_TOKEN }}
+          TBANK_TOKEN: ${{ secrets.TINKOFF_TOKEN }}
           APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
           SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
         run: python3 scripts/sync.py
