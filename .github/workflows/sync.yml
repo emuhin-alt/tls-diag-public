@@ -3,6 +3,10 @@ on:
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
+  push:
+    paths:
+      - scripts/**
+      - .github/workflows/sync.yml
 permissions:
   contents: write   # only for the monthly keepalive commit
 concurrency:
