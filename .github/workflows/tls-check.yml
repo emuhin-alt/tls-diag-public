@@ -6,14 +6,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Public TLS facts (no secrets)
+      - name: Public certificate chain (no secrets)
         run: |
           H=invest-public-api.tbank.ru
-          echo "runner egress country:"; curl -s -m 10 https://ipinfo.io/country || true
-          echo "--- DNS"; getent hosts $H || true
-          echo "--- chain"
-          echo | openssl s_client -connect $H:443 -servername $H -showcerts 2>&1 | grep -E "^ *[0-9] s:|^ *i:|Verify return|Protocol|Cipher is|verify error|unable|errno|alert" | head -20
-          echo "--- curl default store"
-          curl -sS -m 20 -o /dev/null -w "http=%{http_code} verify=%{ssl_verify_result}\n" https://$H/ || true
-          echo "--- curl insecure (reachability only)"
-          curl -sSk -m 20 -o /dev/null -w "http=%{http_code}\n" https://$H/ || true
+          echo | openssl s_client -connect $H:443 -servername $H -showcerts 2>/dev/null > chain.txt
+          awk '/BEGIN CERT/{n++} n{print > ("c" n ".pem")} /END CERT/{close("c" n ".pem")}' chain.txt
+          for f in c*.pem; do
+            echo "== $f"
+            openssl x509 -in $f -noout -subject -issuer -dates -fingerprint -sha256 2>/dev/null | sed 's/street.*//'
+          done
+          echo "== ROOT PEM (c3.pem)"
+          cat c3.pem
