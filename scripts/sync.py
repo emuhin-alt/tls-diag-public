@@ -12,6 +12,8 @@ READ_ONLY = {
     "OperationsService/GetPortfolio",
     "OperationsService/GetOperationsByCursor",
     "InstrumentsService/GetBondCoupons",
+    "InstrumentsService/GetBondEvents",
+    "InstrumentsService/BondBy",
 }
 
 TOKEN = os.environ["TBANK_TOKEN"].strip()
@@ -99,6 +101,23 @@ def main():
     for uid in bonds:
         b = {"instrumentId": uid, "from": iso(day0), "to": iso(day0.replace(year=day0.year + 1))}
         out[key("InstrumentsService/GetBondCoupons", b)] = api("InstrumentsService/GetBondCoupons", b)
+    # События облигаций (погашения, амортизации, оферты) и справка по выпуску: только чтение,
+    # при сбое одной бумаги остальные продолжают загружаться, синхронизация не падает.
+    ev_from = iso(day0 - timedelta(days=400))
+    ev_to = iso(day0 + timedelta(days=366 * 12))
+    ev_ok = ev_fail = ev_total = 0
+    for uid in bonds:
+        try:
+            out["BOND|" + uid] = api("InstrumentsService/BondBy", {"idType": "INSTRUMENT_ID_TYPE_UID", "id": uid})
+            for et in ("EVENT_TYPE_MTY", "EVENT_TYPE_CALL"):
+                r = api("InstrumentsService/GetBondEvents", {"instrumentId": uid, "from": ev_from, "to": ev_to, "type": et})
+                out["EVENTS|" + et + "|" + uid] = r
+                ev_total += len(r.get("events", []))
+            ev_ok += 1
+        except RuntimeError:
+            ev_fail += 1
+        time.sleep(0.2)
+    print(f"bond events: bonds_ok={ev_ok} bonds_failed={ev_fail} events={ev_total}")
     print(f"fetched: accounts={len(open_accounts)} operations={n_ops} bonds={len(bonds)} responses={len(out)}")
 
     payload = json.dumps({"secret": SECRET, "generatedAt": iso(now), "responses": out}).encode()
